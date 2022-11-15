@@ -1,0 +1,8 @@
+{
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "cSpell.words": [
+        "fernet",
+        "Fernet"
+    ]
+}
