@@ -1,8 +1,15 @@
 {
     "python.linting.enabled": true,
     "python.linting.pylintEnabled": true,
+    "python.linting.lintOnSave": true,
     "cSpell.words": [
         "fernet",
         "Fernet"
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "python.analysis.inlayHints.variableTypes": true,
+    "vsintellicode.python.completionsEnabled": true,
+    "vsintellicode.features.python.deepLearning": "enabled",
+    "python.languageServer": "Pylance"
 }
