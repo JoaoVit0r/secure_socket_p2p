@@ -44,11 +44,11 @@ def sign(message: str | bytes, key: RSAPrivateKey) -> bytes:
     ))
 
 
-def verify(signature: bytes, message: str | bytes, key: RSAPublicKey) -> bool:
+def verify(signature: str | bytes, message: str | bytes, key: RSAPublicKey) -> bool:
     # verificando assinatura com chave publica
     try:
         key.verify(
-            signature,
+            cast_to_bytes(signature),
             cast_to_bytes(message),
             algorithm=hashes.SHA256(),
             padding=padding.PSS(
@@ -70,13 +70,13 @@ def serialize_rsa_public_key(key: RSAPublicKey) -> bytes:
     )
 
 
-def deserialize_rsa_public_key(data: bytes) -> RSAPublicKey | None:
+def deserialize_rsa_public_key(data: bytes | str) -> RSAPublicKey | None:
 
     try:
-        key = serialization.load_der_public_key(data)
+        key = serialization.load_der_public_key(cast_to_bytes(data))
         if isinstance(key, RSAPublicKey):
             return key
-        print("key deserialized is not a RSAPublicKey")
+        print("key deserialize is not a RSAPublicKey")
         return None
     except:
         print("error on try deserialize key")
