@@ -229,19 +229,18 @@ class Server(threading.Thread):
                             new_public_key = deserialize_rsa_public_key(
                                 sck_msg["msg"])
                             if new_public_key is None:
+                                # mensagem não é uma PublicKey, ignorando
                                 continue
 
                             # salvando relação RSAPublicKey com o dono
                             new_public_key_owner = sck_msg["senderId"]
                             self.client.keys[new_public_key_owner] = new_public_key
 
-                            # TODO: TO AKI 2
                             # TODO: analisar quando criar uma chave ou não
-                            if self.client.symmetric_key != b'':
+                            if self.client.symmetric_key == b'': # não tenho chave síncrona
+
                                 # gerar chave síncrona nova
                                 self.client.generate_key()
-
-                                # TODO: analisar quando enviar uma chave ou não
 
                                 # enviar chave síncrona (usar RSA-encrypt)
                                 # enviar minha chave Publica
@@ -251,44 +250,100 @@ class Server(threading.Thread):
                                     "origin": self.client.id,
                                     "publicKey": cast_to_str(serialize_rsa_public_key(self.client.public_key)),
                                     "symmetricKey": cast_to_str(encrypt_rsa(self.client.symmetric_key, new_public_key)),
-                                    "symmetricKey": self.client.symmetric_key_time_stamp,
+                                    "symmetricKeyTimeStamp": self.client.symmetric_key_time_stamp,
                                     "sign": cast_to_str(sign(self.client.symmetric_key, self.client.private_key))
                                 })
                                 self.client.send_to_clients(
                                     msg, SENDING_SYMMETRIC_KEY)
-                            elif self.client.symmetric_key_time_stamp != 0.0:
-                                # TODO: analisar quando criar uma chave ou não
-                                pass
+
+                            # TODO: TO AKI 2
+                            # elif self.client.symmetric_key_time_stamp != 0.0: # tenho chave síncrona, mas a que vem é mais antiga (prioridade maior)
+                            #     # TODO: analisar quando criar uma chave ou não
+                            #     pass
 
                         elif msg_type == SENDING_SYMMETRIC_KEY:
-                            # TODO: convert str em dicionario
+                            # esse cliente esta recebendo a SymmetricKey de alguém
+                            
+                            # convert str em dicionario
                             infos_json: SocketMessageSymmetricKey = json.loads(
                                 sck_msg["msg"])
+
                             if not (infos_json["to"] == self.client.id):
+                                # não é para esse cliente, ignorando
                                 continue
 
                             # TODO: TO AKI 3
-                            # verify sign
+                            
+                            # ===== Passo 1 =====
+                            # pegar publicKey de quem esta enviando
                             coming_public_key = deserialize_rsa_public_key(
                                 infos_json["publicKey"])
                             if coming_public_key is None:
+                                # mensagem não é uma PublicKey, ignorando
                                 continue
 
-                            coming_symmetricKey = decrypt_rsa(
-                                infos_json["symmetricKey"], self.client.private_key)
-                            # TODO: checar se estou usando o verify certo
-                            verify(
-                                infos_json["sign"], coming_symmetricKey, coming_public_key)
-                            # save symmetric key
-                            self.client.symmetric_key = coming_symmetricKey
-                            self.client.symmetric_key_time_stamp = infos_json["symmetricKeyTimeStamp"]
+                            # TODO: fazer isso quando estiver tudo OK
+                            # guardar relação da publicKey com quem esta enviando ela
+                            coming_public_key_owner = sck_msg["senderId"]
+                            self.client.keys[coming_public_key_owner] = coming_public_key
+                            
+                            # ===== Passo 2 =====
+                            # pegar assinatura de quem esta enviando
+                            coming_sign = infos_json["sign"]
+                            # descriptografar assinatura de quem esta enviando (encontrar o hash da chave)
+                                # é automático no verify
 
-                            # salvando relação RSAPublicKey com o dono
-                            new_public_key_owner = sck_msg["senderId"]
-                            self.client.keys[new_public_key_owner] = new_public_key
+                            # ===== Passo 3 =====
+                            # pegar chave síncrona criptografada de quem esta enviando
+                            coming_symmetric_key_encrypted = infos_json["symmetricKey"]
+                            # descriptografar chave síncrona criptografada de quem esta enviando
+                            coming_symmetric_key = decrypt_rsa(coming_symmetric_key_encrypted, self.client.private_key)
+                            # hash da chave síncrona de quem esta enviando
+                                # é automático no verify
 
-                            self.client.keys[sck_msg["origin"]
-                                             ] = sck_msg.get("publicKey")
+                            # ===== Passo 4 =====
+                            # verificar se os hashing batem
+                            verified = verify(coming_sign, coming_symmetric_key_encrypted, coming_public_key)
+
+                            if not verified:
+                                continue
+
+                            # TODO: TO AKI 4
+                            # ===== Passo 5 =====
+                            coming_symmetric_key_time_stamp = infos_json["symmetricKeyTimeStamp"]
+                            # TODO: verificar se tenho a chave síncrona 
+                                # TODO: não tenho a chave síncrona, adicionando
+
+                                # TODO: tenho, verificar se a chave síncrona é mais antiga (prioritária) que a atual
+                                    # TODO: tenho a mais antiga (prioritária), mandar essa para quem me enviou a mais recente (inútil)
+                                    # TODO: recebi a mais antiga (prioritária), me atualizo para essa
+
+                            # # verify sign
+                            # coming_public_key = deserialize_rsa_public_key(
+                            #     infos_json["publicKey"])
+                            # if coming_public_key is None:
+                            #     continue
+
+                            # coming_symmetricKey = decrypt_rsa(
+                            #     infos_json["symmetricKey"], self.client.private_key)
+                            # # TODO: checar se estou usando o verify certo
+                            # verify(
+                            #     infos_json["sign"], coming_symmetricKey, coming_public_key)
+                            # # save symmetric key
+                            # self.client.symmetric_key = coming_symmetricKey
+                            # self.client.symmetric_key_time_stamp = infos_json["symmetricKeyTimeStamp"]
+
+                            # # salvando relação RSAPublicKey com o dono
+                            # new_public_key_owner = sck_msg["senderId"]
+                            # self.client.keys[new_public_key_owner] = new_public_key
+
+                            # self.client.keys[sck_msg["origin"]
+                            #                  ] = sck_msg.get("publicKey")
+
+
+
+
+
 
                             # {
                             #     "to": id,
