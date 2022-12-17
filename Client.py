@@ -205,7 +205,6 @@ class Client(threading.Thread):
             if msg == '':
                 continue
 
-            # TODO: TO AKI 1
             # TODO: criptografar mensagem
 
             print("\tSending...\n")
@@ -230,14 +229,14 @@ class Server(threading.Thread):
                 try:
                     # recebe mensagem
                     s = item.recv(1024)
-                    print('s type is', type(s), ', and your value is', s)
+                    # print('s type is', type(s), ', and your value is', s)
                     if s != b'' and s != '' :
                         chunk: bytes = s
                         print('Received new message')
                         # interpreta a mensagem como json e esparasse q seja do meu tipo SocketMessage
                         sck_msg: SocketMessage = json.loads(
                             chunk.decode(FORMAT))
-                        print("message from " + sck_msg["senderName"] + '\n>>')
+                        print("message from " + sck_msg["senderName"] + '\n')
 
                         sender_id = sck_msg["senderId"]
                         # verificar se estou recebendo mensagem minha, se sim ignorar
@@ -251,12 +250,16 @@ class Server(threading.Thread):
                         if msg_type == SENDING_PUBLIC_TOKEN:
                             # esse cliente esta recebendo a PublicKey de alguém
 
+                            # TODO: TO AKI 1, error on deserialize
+                            print('msg type is', type(sck_msg["msg"]), ', and your value is', sck_msg["msg"])
                             # converter str da mensagem em RSAPublicKey
                             new_public_key = deserialize_rsa_public_key(
                                 sck_msg["msg"])
                             if new_public_key is None:
                                 # mensagem não é uma PublicKey, ignorando
+                                print('new_public_key is None')
                                 continue
+                            print('new_public_key', type(new_public_key), ', and your value is', new_public_key)
 
                             # salvando relação RSAPublicKey com o dono
                             new_public_key_owner = sender_id
@@ -352,7 +355,6 @@ class Server(threading.Thread):
                             # pega a mensagem encriptada
                             message_encrypted = sck_msg["msg"]
 
-                            # TODO: TO AKI 2
                             # TODO: descriptografar mensagem
                             msg = message_encrypted
 
