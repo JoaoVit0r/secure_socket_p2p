@@ -223,6 +223,7 @@ class Server(threading.Thread):
 
     def run(self):
         lis = []
+        lis.append(self.receive)
         while 1:
             read, write, err = select.select(lis, [], [])
             for item in read:
