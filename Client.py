@@ -160,8 +160,8 @@ class Client(threading.Thread):
         # Conecta socket com o Servidor já rodando
         self.connect(host, port)
         print("Connected\n")
-        # self.user_name = input("Enter the User Name to be Used\n>>")
-        self.user_name = "user1"
+        self.user_name = input("Enter the User Friendly Name to be Used\n>>")
+        # self.user_name = "user1"
 
         time.sleep(1)
         # configura Nova thread
@@ -176,7 +176,6 @@ class Client(threading.Thread):
         # Broadcasting minha chave pública, independente de ter alguém para responder
         self.send_to_clients(serialize_rsa_public_key(
             self.public_key), SENDING_PUBLIC_TOKEN)
-        # TODO: TO AKI
         while 1:
             # while self.keys.__len__():
             #     # percorre Chaves conhecidas
@@ -194,7 +193,6 @@ class Client(threading.Thread):
             #                 msg, SENDING_SYMMETRIC_KEY)
             #         continue
 
-            # # TODO: entender o q é isso
             if self.symmetric_key == b'':
                 continue
 
@@ -204,10 +202,12 @@ class Client(threading.Thread):
                 break
             if msg == '':
                 continue
-            # print "Sending\n"
-            msg = self.user_name + ': ' + msg
-            data = msg.encode(FORMAT)
-            self.send_to_clients(data, SENDING_SYMMETRIC_KEY)
+
+            # TODO: TO AKI 1
+            # TODO: criptografar mensagem
+
+            print("\tSending...\n")
+            self.send_to_clients(msg, SENDING_MESSAGE)
         return (1)
 
 
@@ -227,7 +227,7 @@ class Server(threading.Thread):
                 try:
                     # recebe mensagem
                     s = item.recv(1024)
-                    if s != '' and s != b'':
+                    if s != b'' and s != '' :
                         chunk: bytes = s
                         print('Received new message')
                         # interpreta a mensagem como json e esparasse q seja do meu tipo SocketMessage
@@ -257,7 +257,6 @@ class Server(threading.Thread):
                             new_public_key_owner = sender_id
                             self.client.keys[new_public_key_owner] = new_public_key
 
-                            # TODO: analisar quando criar uma chave ou não
                             if self.client.symmetric_key == b'':  # não tenho chave síncrona
 
                                 # gerar chave síncrona nova
@@ -291,7 +290,6 @@ class Server(threading.Thread):
                                 # mensagem não é uma PublicKey, ignorando
                                 continue
 
-                            # TODO: fazer isso quando estiver tudo OK
                             # guardar relação da publicKey com quem esta enviando ela
                             coming_public_key_owner = sck_msg["senderId"]
                             self.client.keys[coming_public_key_owner] = coming_public_key
@@ -343,11 +341,20 @@ class Server(threading.Thread):
                                 self.client.send_to_clients(
                                     msg, SENDING_SYMMETRIC_KEY)
 
-                            # TODO: TO AKI 4
                         elif msg_type == SENDING_MESSAGE:
                             # mensagem normal
-                            # TODO: fazer envio de mensagem normal criptografada para geral
-                            pass
+
+                            # pega a mensagem encriptada
+                            message_encrypted = sck_msg["msg"]
+
+                            # TODO: TO AKI 2
+                            # TODO: descriptografar mensagem
+                            msg = message_encrypted
+
+                            # mostrar mensagem
+                            sender_name = sck_msg["senderName"]
+                            print("Message from", sender_name,":\t", msg, "\n")
+
 
                 except:
                     traceback.print_exc(file=sys.stdout)
