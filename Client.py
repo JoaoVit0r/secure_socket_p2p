@@ -38,7 +38,6 @@ class SocketMessage(TypedDict):
 
 class SocketMessageSymmetricKey(TypedDict):
     to: str
-    origin: str
     publicKey: str
     symmetricKey: str
     symmetricKeyTimeStamp: float
@@ -128,7 +127,6 @@ class Client(threading.Thread):
         # gerar o objeto python que será enviado para algum cliente, que precisa da chave síncrona atualizada
         symmetric_key_payload: SocketMessageSymmetricKey = {
             "to": destiny_id,
-            "origin": self.id,
             "publicKey": cast_to_str(serialize_rsa_public_key(self.public_key)),
             "symmetricKey": cast_to_str(encrypt_rsa(self.symmetric_key, destiny_public_key)),
             "symmetricKeyTimeStamp": self.symmetric_key_time_stamp,
@@ -197,9 +195,10 @@ class Client(threading.Thread):
             #         continue
 
             # # TODO: entender o q é isso
-            # if not self.symmetric_key.__len__():
-            #     continue
-            # print "Waiting for message\n"
+            if self.symmetric_key == b'':
+                continue
+
+            print("Voce poderá estar recebendo mensagens, escreva a sua:\n")
             msg = input('>>')
             if msg == 'exit':
                 break
@@ -236,7 +235,11 @@ class Server(threading.Thread):
                             chunk.decode(FORMAT))
                         print("message from " + sck_msg["senderName"] + '\n>>')
 
-                        # TODO: verificar se estou recebendo mensagem minha, se sim ignorar
+                        sender_id = sck_msg["senderId"]
+                        # verificar se estou recebendo mensagem minha, se sim ignorar
+                        if sender_id == self.client.id:
+                            # mensagem é minha, ignorando
+                            continue
 
                         msg_type = sck_msg["msg_type"]
 
@@ -251,7 +254,7 @@ class Server(threading.Thread):
                                 continue
 
                             # salvando relação RSAPublicKey com o dono
-                            new_public_key_owner = sck_msg["senderId"]
+                            new_public_key_owner = sender_id
                             self.client.keys[new_public_key_owner] = new_public_key
 
                             # TODO: analisar quando criar uma chave ou não
@@ -269,11 +272,6 @@ class Server(threading.Thread):
                                 self.client.send_to_clients(
                                     msg, SENDING_SYMMETRIC_KEY)
 
-                            # TODO: TO AKI 2
-                            # elif self.client.symmetric_key_time_stamp != 0.0: # tenho chave síncrona, mas a que vem é mais antiga (prioridade maior)
-                            #     # TODO: analisar quando criar uma chave ou não
-                            #     pass
-
                         elif msg_type == SENDING_SYMMETRIC_KEY:
                             # esse cliente esta recebendo a SymmetricKey de alguém
 
@@ -284,8 +282,6 @@ class Server(threading.Thread):
                             if not (infos_json["to"] == self.client.id):
                                 # não é para esse cliente, ignorando
                                 continue
-
-                            # TODO: TO AKI 3
 
                             # ===== Passo 1 =====
                             # pegar publicKey de quem esta enviando
