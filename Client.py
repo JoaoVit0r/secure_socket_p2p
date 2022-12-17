@@ -9,7 +9,7 @@ import select
 import traceback
 from typing import Any, TypedDict, Literal
 from enum import Enum, auto, unique
-from utils.cast import cast_to_bytes, cast_to_str
+from utils.cast import cast_to_str
 from utils.encryption import decrypt_rsa, deserialize_rsa_public_key, encrypt_rsa, hash, serialize_rsa_public_key, sign, verify
 
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
