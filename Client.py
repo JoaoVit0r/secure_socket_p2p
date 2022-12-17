@@ -64,6 +64,7 @@ class Client(threading.Thread):
         time_stamp = time.time()
 
         self.id = 'client_' + time_stamp.__str__()
+        self.user_name = sys.argv.pop()
         self.generate_keys_rsa()
         super().__init__()
 
@@ -160,7 +161,7 @@ class Client(threading.Thread):
         # Conecta socket com o Servidor já rodando
         self.connect(host, port)
         print("Connected\n")
-        self.user_name = input("Enter the User Friendly Name to be Used\n>>")
+        # self.user_name = input("Enter the User Friendly Name to be Used\n>>")
         # self.user_name = "user1"
 
         time.sleep(1)
@@ -193,6 +194,7 @@ class Client(threading.Thread):
             #                 msg, SENDING_SYMMETRIC_KEY)
             #         continue
 
+            time.sleep(1)
             if self.symmetric_key == b'':
                 continue
 
@@ -227,6 +229,7 @@ class Server(threading.Thread):
                 try:
                     # recebe mensagem
                     s = item.recv(1024)
+                    print('s type is', type(s), ', and your value is', s)
                     if s != b'' and s != '' :
                         chunk: bytes = s
                         print('Received new message')
@@ -238,6 +241,7 @@ class Server(threading.Thread):
                         sender_id = sck_msg["senderId"]
                         # verificar se estou recebendo mensagem minha, se sim ignorar
                         if sender_id == self.client.id:
+                            print('ignoring message, because is mine')
                             # mensagem é minha, ignorando
                             continue
 

@@ -38,15 +38,15 @@ class Server(threading.Thread):
                         s: bytes = sock.recv(1024)
 
                         if len(s) == 0:
-                            print(str(sock.getpeername()),
+                            print('\t', str(sock.getpeername()),
                                   'sent empty message')
                             continue
                         else:
-                            print(str(sock.getpeername()), 'append message')
-                            SENT_BY[s] = (str(sock.getpeername()))
+                            print('\t', str(sock.getpeername()), 'append message')
                             TO_BE_SENT.append(s)
+                            SENT_BY[s] = (str(sock.getpeername()))
                     except:
-                        print(str(sock.getpeername()), 'with error')
+                        print('\t', str(sock.getpeername()), 'with error')
 
 
 class handle_connections(threading.Thread):
