@@ -244,7 +244,7 @@ class Server(threading.Thread):
             for item in read:
                 try:
                     # recebe mensagem
-                    s = item.recv(1024)
+                    s = item.recv(1024*4)
                     # print('s type is', type(s), ', and your value is', s)
                     if s != b'' and s != '':
                         chunk: bytes = s
@@ -252,7 +252,7 @@ class Server(threading.Thread):
                         # interpreta a mensagem como json e esparasse q seja do meu tipo SocketMessage
                         sck_msg: SocketMessage = json.loads(
                             chunk.decode(FORMAT))
-                        print("message from " + sck_msg["senderName"] + '\n')
+                        print("message from", sck_msg["senderName"])
 
                         sender_id = sck_msg["senderId"]
                         # verificar se estou recebendo mensagem minha, se sim ignorar
@@ -305,6 +305,7 @@ class Server(threading.Thread):
                             if not (infos_json["to"] == self.client.id):
                                 # não é para esse cliente, ignorando
                                 continue
+                            print("recebendo symmetric_key")
 
                             # ===== Passo 1 =====
                             # pegar publicKey de quem esta enviando
@@ -317,16 +318,19 @@ class Server(threading.Thread):
                             # guardar relação da publicKey com quem esta enviando ela
                             coming_public_key_owner = sck_msg["senderId"]
                             self.client.keys[coming_public_key_owner] = coming_public_key
+                            print("salvando public_key")
 
                             # ===== Passo 2 =====
                             # pegar assinatura de quem esta enviando
-                            coming_sign = b64decode(cast_to_bytes(infos_json["sign"]))
+                            coming_sign = b64decode(
+                                cast_to_bytes(infos_json["sign"]))
                             # descriptografar assinatura de quem esta enviando (encontrar o hash da chave)
                             # é automático no verify
 
                             # ===== Passo 3 =====
                             # pegar chave síncrona criptografada de quem esta enviando
-                            coming_symmetric_key_encrypted = b64decode(cast_to_bytes(infos_json["symmetricKey"]))
+                            coming_symmetric_key_encrypted = b64decode(
+                                cast_to_bytes(infos_json["symmetricKey"]))
                             # descriptografar chave síncrona criptografada de quem esta enviando
                             coming_symmetric_key = decrypt_rsa(
                                 coming_symmetric_key_encrypted, self.client.private_key)
@@ -336,16 +340,19 @@ class Server(threading.Thread):
                             # ===== Passo 4 =====
                             # verificar se os hashing batem
                             verified = verify(
-                                coming_sign, coming_symmetric_key_encrypted, coming_public_key)
+                                coming_sign, coming_symmetric_key, coming_public_key)
 
                             if not verified:
+                                print("sign not valid")
                                 continue
+                            print("symmetric_key verified")
 
                             # ===== Passo 5 =====
                             coming_symmetric_key_time_stamp = infos_json["symmetricKeyTimeStamp"]
                             # verificar se tenho a chave síncrona
                             if self.client.symmetric_key == b'' or self.client.symmetric_key_time_stamp > coming_symmetric_key_time_stamp:  # não tenho chave síncrona
 
+                                print("atualizando symmetric_key")
                                 # não tenho a chave síncrona, adicionando
                                 # OU
                                 # recebi a mais antiga (prioritária), me atualizo para essa
@@ -356,6 +363,7 @@ class Server(threading.Thread):
                             elif self.client.symmetric_key_time_stamp < coming_symmetric_key_time_stamp:
                                 # tenho a mais antiga (prioritária), mandar essa para quem me enviou a mais recente (inútil)
 
+                                print("retornando symmetric_key correta")
                                 # enviar chave síncrona (usar RSA-encrypt)
                                 # enviar minha chave Publica
                                 # enviar HASH da chave síncrona (usar RSA-encrypt)

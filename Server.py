@@ -35,7 +35,7 @@ class Server(threading.Thread):
 
                 else:
                     try:
-                        s: bytes = sock.recv(1024)
+                        s: bytes = sock.recv(1024*4)
 
                         if len(s) == 0:
                             print('\t', str(sock.getpeername()),

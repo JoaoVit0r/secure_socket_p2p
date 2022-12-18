@@ -75,6 +75,7 @@ def serialize_rsa_public_key(key: RSAPublicKey) -> bytes:
 
 def deserialize_rsa_public_key(data: bytes | str) -> RSAPublicKey | None:
 
+    print("data to deserialize", data)
     # TODO: TO AKI 2, error on deserialize
     try:
         key = serialization.load_pem_public_key(
@@ -82,6 +83,7 @@ def deserialize_rsa_public_key(data: bytes | str) -> RSAPublicKey | None:
             backend=default_backend()
         )
         if isinstance(key, RSAPublicKey):
+            print("key deserialized", serialize_rsa_public_key(key))
             return key
         print("key deserialize is not a RSAPublicKey")
         return None
