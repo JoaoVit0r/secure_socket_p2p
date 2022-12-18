@@ -148,6 +148,15 @@ class Client(threading.Thread):
         }
         return symmetric_key_payload
 
+    def payload_to_send_message(self, msg: str) -> SocketMessageDefault:
+        # gerar o objeto python que será enviado para algum cliente, contendo a mensagem e assinatura
+        encrypt_fernet_msg = self.encrypt_fernet(msg)
+        message_info: SocketMessageDefault = {
+            "message": cast_to_str(b64encode(encrypt_fernet_msg)),
+            "sign": cast_to_str(b64encode(sign(msg, self.private_key)))
+        }
+        return message_info
+
     def run(self):
         # chaves já geradas no init
 
@@ -204,11 +213,7 @@ class Client(threading.Thread):
                 continue
 
             # criptografar mensagem
-            encrypt_fernet_msg = self.encrypt_fernet(msg)
-            message_info: SocketMessageDefault = {
-                "message": cast_to_str(b64encode(encrypt_fernet_msg)),
-                "sign": cast_to_str(b64encode(hash(encrypt_fernet_msg)))
-            }
+            message_info = self.payload_to_send_message(msg)
 
             print("\tSending...\n")
             self.send_to_clients(json.dumps(message_info), SENDING_MESSAGE)
@@ -378,8 +383,16 @@ class Server(threading.Thread):
                             sign = b64decode(
                                 cast_to_bytes(infos_message["sign"]))
 
+                            # pegar relação da publicKey com quem esta enviando ela
+                            try:
+                                related_public_key = self.client.keys[sender_id]
+                            except:
+                                print("error on get publicKey from saved keys")
+                                continue
+
                             # verificar se os hashing batem
-                            verified = sign == hash(message_encrypted_bytes)
+                            verified = verify(
+                                sign, msg, related_public_key)
 
                             if not verified:
                                 print("message not valid")
