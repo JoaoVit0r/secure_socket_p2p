@@ -388,17 +388,17 @@ class Server(threading.Thread):
                             # pega a mensagem encriptada
                             message_encrypted = infos_message["message"]
 
+                            # descriptografar mensagem
+                            message_encrypted_bytes = b64decode(
+                                cast_to_bytes(message_encrypted))
+                            msg: str = cast_to_str(
+                                self.client.decrypt_fernet(message_encrypted_bytes))
+
                             sign = b64decode(
                                 cast_to_bytes(infos_message["sign"]))
 
-                            # descriptografar mensagem
-                            msg_bytes = (self.client.decrypt_fernet(b64decode(
-                                cast_to_bytes(message_encrypted))))
-                            msg: str = cast_to_str(msg_bytes)
-
-
                             # verificar se os hashing batem
-                            verified = sign == hash(msg_bytes)
+                            verified = sign == hash(message_encrypted_bytes)
 
                             if not verified:
                                 print("message not valid")
