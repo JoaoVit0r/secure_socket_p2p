@@ -248,11 +248,11 @@ class Server(threading.Thread):
                     # print('s type is', type(s), ', and your value is', s)
                     if s != b'' and s != '':
                         chunk: bytes = s
-                        print('Received new message')
+                        # print('Received new message')
                         # interpreta a mensagem como json e esparasse q seja do meu tipo SocketMessage
                         sck_msg: SocketMessage = json.loads(
                             chunk.decode(FORMAT))
-                        print("message from", sck_msg["senderName"])
+                        # print("message from", sck_msg["senderName"])
 
                         sender_id = sck_msg["senderId"]
                         # verificar se estou recebendo mensagem minha, se sim ignorar
@@ -285,14 +285,14 @@ class Server(threading.Thread):
                                 # gerar chave síncrona nova
                                 self.client.generate_key()
 
-                                # enviar chave síncrona (usar RSA-encrypt)
-                                # enviar minha chave Publica
-                                # enviar HASH da chave síncrona (usar RSA-encrypt)
-                                msg = json.dumps(self.client.payload_to_send_symmetric_key(
-                                    new_public_key_owner, new_public_key))
+                            # enviar chave síncrona (usar RSA-encrypt)
+                            # enviar minha chave Publica
+                            # enviar HASH da chave síncrona (usar RSA-encrypt)
+                            msg = json.dumps(self.client.payload_to_send_symmetric_key(
+                                new_public_key_owner, new_public_key))
 
-                                print("enviando symmetric_key")
-                                self.client.send_to_clients(
+                            print("enviando symmetric_key")
+                            self.client.send_to_clients(
                                     msg, SENDING_SYMMETRIC_KEY)
 
                         elif msg_type == SENDING_SYMMETRIC_KEY:
@@ -384,7 +384,10 @@ class Server(threading.Thread):
 
                             # mostrar mensagem
                             sender_name = sck_msg["senderName"]
-                            print("Message from", sender_name, ":\t", msg, "\n")
+                            print(sender_name + ":", msg)
+
+                        if self.client.symmetric_key != b'':
+                            print("\n>>", end='')
 
                 except:
                     traceback.print_exc(file=sys.stdout)
