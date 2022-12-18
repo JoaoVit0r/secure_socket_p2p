@@ -45,8 +45,6 @@ class SocketMessageSymmetricKey(TypedDict):
     symmetricKeyTimeStamp: float
     sign: str
 
-# TODO: use this to send message encrypted and you hash
-
 
 class SocketMessageDefault(TypedDict):
     message: str
@@ -187,27 +185,10 @@ class Client(threading.Thread):
         # executa Nova thread para controlar os recebimentos de mensagens
         srv.start()
 
-        # TODO: (Não) talvez, enviar infinitamente até receber q alguém recebeu, para saber se recebeu vai vir pela thread de Server uma mensagem
-
         # Broadcasting minha chave pública, independente de ter alguém para responder
         self.send_to_clients(serialize_rsa_public_key(
             self.public_key), SENDING_PUBLIC_TOKEN)
         while 1:
-            # while self.keys.__len__():
-            #     # percorre Chaves conhecidas
-            #     if not self.symmetric_key.__len__():
-            #         self.generate_key()
-            #         for id, publicKey in self.keys.items():
-            #             msg = json.dumps({
-            #                 "to": id,
-            #                 ""origin"": self.id,
-            #                 "publicKey": cast_to_str(serialize_rsa_public_key(self.public_key)),
-            #                 "symmetricKey": cast_to_str(encrypt_rsa(self.symmetric_key, publicKey)),
-            #                 "sign": cast_to_str(sign(self.symmetric_key, self.private_key))
-            #             })
-            #             self.send_to_clients(
-            #                 msg, SENDING_SYMMETRIC_KEY)
-            #         continue
 
             time.sleep(1)
             if self.symmetric_key == b'':
@@ -270,7 +251,6 @@ class Server(threading.Thread):
                         if msg_type == SENDING_PUBLIC_TOKEN:
                             # esse cliente esta recebendo a PublicKey de alguém
 
-                            # TODO: TO AKI 1, error on deserialize
                             # converter str da mensagem em RSAPublicKey
                             new_public_key = deserialize_rsa_public_key(
                                 sck_msg["msg"])
