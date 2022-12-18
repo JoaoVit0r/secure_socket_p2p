@@ -400,7 +400,7 @@ class Server(threading.Thread):
 
                             # mostrar mensagem
                             sender_name = sck_msg["senderName"]
-                            print(sender_name + ":", msg)
+                            print("\n<<", sender_name + ":", msg)
 
                         if self.client.symmetric_key != b'':
                             print("\n>>", end='')
