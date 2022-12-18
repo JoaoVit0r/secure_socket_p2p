@@ -7,9 +7,10 @@ import time
 import threading
 import select
 import traceback
+from base64 import b64encode, b64decode
 from typing import Any, TypedDict, Literal
 from enum import Enum, auto, unique
-from utils.cast import cast_to_str
+from utils.cast import cast_to_str, cast_to_bytes
 from utils.encryption import decrypt_rsa, deserialize_rsa_public_key, encrypt_rsa, hash, serialize_rsa_public_key, sign, verify
 
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
@@ -18,6 +19,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
 
 SENDING_MESSAGE = "sending_message"
 SENDING_PUBLIC_TOKEN = "sending_public_token"
@@ -43,6 +45,13 @@ class SocketMessageSymmetricKey(TypedDict):
     symmetricKeyTimeStamp: float
     sign: str
 
+# TODO: use this to send message encrypted and you hash
+
+
+class SocketMessageDefault(TypedDict):
+    message: str
+    sign: str
+
 
 class Client(threading.Thread):
 
@@ -55,7 +64,7 @@ class Client(threading.Thread):
 
     symmetric_key_time_stamp = 0.0
     symmetric_key = b''
-    fernet: Fernet
+    fernet: Fernet | None = None
 
     keys: dict[str, RSAPublicKey] = {}
     sock: socket.socket
@@ -73,6 +82,7 @@ class Client(threading.Thread):
         self.private_key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,
+            backend=default_backend()
         )
         self.public_key = self.private_key.public_key()
 
@@ -84,6 +94,7 @@ class Client(threading.Thread):
 
     def update_key(self, symmetric_key: bytes, symmetric_key_time_stamp: float) -> None:
         # armazena nova chave simétrica, anotando o horário
+        print("!!! update_key")
         self.symmetric_key_time_stamp = symmetric_key_time_stamp
         self.symmetric_key = symmetric_key
         self.fernet = Fernet(self.symmetric_key)
@@ -95,13 +106,17 @@ class Client(threading.Thread):
         return {self.id: self.public_key}
 
     def encrypt_fernet(self, message: str):
+        if self.fernet is None:
+            return b''
         return self.fernet.encrypt(message.encode(FORMAT))
 
-    def decrypt_fernet(self, ciphertext, key):  # privateKey
+    def decrypt_fernet(self, cipher_text, key):  # privateKey
+        if self.fernet is None:
+            return b''
         try:
-            return self.fernet.decrypt(ciphertext, key).decode(FORMAT)
+            return self.fernet.decrypt(cipher_text, key).decode(FORMAT)
         except:
-            return False
+            return b''
 
     # def serialize_rsa_public_key(self, key: RSAPublicKey):
     #     return key.public_bytes(
@@ -129,9 +144,9 @@ class Client(threading.Thread):
         symmetric_key_payload: SocketMessageSymmetricKey = {
             "to": destiny_id,
             "publicKey": cast_to_str(serialize_rsa_public_key(self.public_key)),
-            "symmetricKey": cast_to_str(encrypt_rsa(self.symmetric_key, destiny_public_key)),
+            "symmetricKey": cast_to_str(b64encode(encrypt_rsa(self.symmetric_key, destiny_public_key))),
             "symmetricKeyTimeStamp": self.symmetric_key_time_stamp,
-            "sign": cast_to_str(sign(self.symmetric_key, self.private_key))
+            "sign": cast_to_str(b64encode(sign(self.symmetric_key, self.private_key)))
         }
         return symmetric_key_payload
 
@@ -197,6 +212,7 @@ class Client(threading.Thread):
             time.sleep(1)
             if self.symmetric_key == b'':
                 continue
+            print("symmetric_key mudou:", self.symmetric_key)
 
             print("Voce poderá estar recebendo mensagens, escreva a sua:\n")
             msg = input('>>')
@@ -230,7 +246,7 @@ class Server(threading.Thread):
                     # recebe mensagem
                     s = item.recv(1024)
                     # print('s type is', type(s), ', and your value is', s)
-                    if s != b'' and s != '' :
+                    if s != b'' and s != '':
                         chunk: bytes = s
                         print('Received new message')
                         # interpreta a mensagem como json e esparasse q seja do meu tipo SocketMessage
@@ -251,7 +267,6 @@ class Server(threading.Thread):
                             # esse cliente esta recebendo a PublicKey de alguém
 
                             # TODO: TO AKI 1, error on deserialize
-                            print('msg type is', type(sck_msg["msg"]), ', and your value is', sck_msg["msg"])
                             # converter str da mensagem em RSAPublicKey
                             new_public_key = deserialize_rsa_public_key(
                                 sck_msg["msg"])
@@ -259,13 +274,13 @@ class Server(threading.Thread):
                                 # mensagem não é uma PublicKey, ignorando
                                 print('new_public_key is None')
                                 continue
-                            print('new_public_key', type(new_public_key), ', and your value is', new_public_key)
 
                             # salvando relação RSAPublicKey com o dono
                             new_public_key_owner = sender_id
                             self.client.keys[new_public_key_owner] = new_public_key
 
                             if self.client.symmetric_key == b'':  # não tenho chave síncrona
+                                print("gerando symmetric_key")
 
                                 # gerar chave síncrona nova
                                 self.client.generate_key()
@@ -276,6 +291,7 @@ class Server(threading.Thread):
                                 msg = json.dumps(self.client.payload_to_send_symmetric_key(
                                     new_public_key_owner, new_public_key))
 
+                                print("enviando symmetric_key")
                                 self.client.send_to_clients(
                                     msg, SENDING_SYMMETRIC_KEY)
 
@@ -304,13 +320,13 @@ class Server(threading.Thread):
 
                             # ===== Passo 2 =====
                             # pegar assinatura de quem esta enviando
-                            coming_sign = infos_json["sign"]
+                            coming_sign = b64decode(cast_to_bytes(infos_json["sign"]))
                             # descriptografar assinatura de quem esta enviando (encontrar o hash da chave)
                             # é automático no verify
 
                             # ===== Passo 3 =====
                             # pegar chave síncrona criptografada de quem esta enviando
-                            coming_symmetric_key_encrypted = infos_json["symmetricKey"]
+                            coming_symmetric_key_encrypted = b64decode(cast_to_bytes(infos_json["symmetricKey"]))
                             # descriptografar chave síncrona criptografada de quem esta enviando
                             coming_symmetric_key = decrypt_rsa(
                                 coming_symmetric_key_encrypted, self.client.private_key)
@@ -360,8 +376,7 @@ class Server(threading.Thread):
 
                             # mostrar mensagem
                             sender_name = sck_msg["senderName"]
-                            print("Message from", sender_name,":\t", msg, "\n")
-
+                            print("Message from", sender_name, ":\t", msg, "\n")
 
                 except:
                     traceback.print_exc(file=sys.stdout)

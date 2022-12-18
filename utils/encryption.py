@@ -4,6 +4,7 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPubl
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from utils.cast import cast_to_bytes
+from cryptography.hazmat.backends import default_backend
 
 
 ############# Hash #############################
@@ -18,18 +19,20 @@ def hash(content: bytes):
 
 def encrypt_rsa(message: str | bytes, key: RSAPublicKey) -> bytes:
     # decriptando com chave publica
-    return key.encrypt(cast_to_bytes(message), padding=padding.PSS(
-        mgf=padding.MGF1(hashes.SHA256()),
-        salt_length=padding.PSS.MAX_LENGTH
+    return key.encrypt(cast_to_bytes(message), padding=padding.OAEP(
+        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+        algorithm=hashes.SHA256(),
+        label=None
     ))
 
 
 def decrypt_rsa(cipher_text: str | bytes, key: RSAPrivateKey) -> bytes:
     # decriptando com chave privada
     try:
-        return key.decrypt(cast_to_bytes(cipher_text), padding=padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH
+        return key.decrypt(cast_to_bytes(cipher_text), padding=padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
         ))
     except:
         print("error ignored in decrypt_rsa")
@@ -74,7 +77,10 @@ def deserialize_rsa_public_key(data: bytes | str) -> RSAPublicKey | None:
 
     # TODO: TO AKI 2, error on deserialize
     try:
-        key = serialization.load_pem_public_key(cast_to_bytes(data))
+        key = serialization.load_pem_public_key(
+            cast_to_bytes(data),
+            backend=default_backend()
+        )
         if isinstance(key, RSAPublicKey):
             return key
         print("key deserialize is not a RSAPublicKey")
