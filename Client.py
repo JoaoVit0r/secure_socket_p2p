@@ -225,7 +225,7 @@ class Client(threading.Thread):
             encrypt_fernet_msg = self.encrypt_fernet(msg)
             message_info: SocketMessageDefault = {
                 "message": cast_to_str(b64encode(encrypt_fernet_msg)),
-                "sign": cast_to_str(hash(b64encode(encrypt_fernet_msg)))
+                "sign": cast_to_str(b64encode(hash(encrypt_fernet_msg)))
             }
 
             print("\tSending...\n")
