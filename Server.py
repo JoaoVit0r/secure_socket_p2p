@@ -56,9 +56,9 @@ class handle_connections(threading.Thread):
             for items in TO_BE_SENT:
                 for s in write:
                     try:
-                        print("SENT_BY", SENT_BY)
+                        # print("SENT_BY", SENT_BY)
                         if (str(s.getpeername()) == SENT_BY[items]):
-                            print("Ignoring %s" % (str(s.getpeername())))
+                            # print("Ignoring %s" % (str(s.getpeername())))
                             continue
                         print("Sending to %s" % (str(s.getpeername())))
                         s.send(items)

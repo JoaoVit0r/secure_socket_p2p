@@ -94,7 +94,7 @@ class Client(threading.Thread):
 
     def update_key(self, symmetric_key: bytes, symmetric_key_time_stamp: float) -> None:
         # armazena nova chave simétrica, anotando o horário
-        print("!!! update_key")
+        # print("!!! update_key")
         self.symmetric_key_time_stamp = symmetric_key_time_stamp
         self.symmetric_key = symmetric_key
         self.fernet = Fernet(self.symmetric_key)
@@ -212,7 +212,6 @@ class Client(threading.Thread):
             time.sleep(1)
             if self.symmetric_key == b'':
                 continue
-            print("symmetric_key mudou:", self.symmetric_key)
 
             print("Voce poderá estar recebendo mensagens, escreva a sua:\n")
             msg = input('>>')
@@ -285,7 +284,7 @@ class Server(threading.Thread):
                             self.client.keys[new_public_key_owner] = new_public_key
 
                             if self.client.symmetric_key == b'':  # não tenho chave síncrona
-                                print("gerando symmetric_key")
+                                # print("gerando symmetric_key")
 
                                 # gerar chave síncrona nova
                                 self.client.generate_key()
@@ -296,7 +295,7 @@ class Server(threading.Thread):
                             msg = json.dumps(self.client.payload_to_send_symmetric_key(
                                 new_public_key_owner, new_public_key))
 
-                            print("enviando symmetric_key")
+                            # print("enviando symmetric_key")
                             self.client.send_to_clients(
                                 msg, SENDING_SYMMETRIC_KEY)
 
@@ -310,7 +309,7 @@ class Server(threading.Thread):
                             if not (infos_json["to"] == self.client.id):
                                 # não é para esse cliente, ignorando
                                 continue
-                            print("recebendo symmetric_key")
+                            # print("recebendo symmetric_key")
 
                             # ===== Passo 1 =====
                             # pegar publicKey de quem esta enviando
@@ -323,7 +322,7 @@ class Server(threading.Thread):
                             # guardar relação da publicKey com quem esta enviando ela
                             coming_public_key_owner = sck_msg["senderId"]
                             self.client.keys[coming_public_key_owner] = coming_public_key
-                            print("salvando public_key")
+                            # print("salvando public_key")
 
                             # ===== Passo 2 =====
                             # pegar assinatura de quem esta enviando
@@ -350,14 +349,14 @@ class Server(threading.Thread):
                             if not verified:
                                 print("sign not valid")
                                 continue
-                            print("symmetric_key verified")
+                            # print("symmetric_key verified")
 
                             # ===== Passo 5 =====
                             coming_symmetric_key_time_stamp = infos_json["symmetricKeyTimeStamp"]
                             # verificar se tenho a chave síncrona
                             if self.client.symmetric_key == b'' or self.client.symmetric_key_time_stamp > coming_symmetric_key_time_stamp:  # não tenho chave síncrona
 
-                                print("atualizando symmetric_key")
+                                # print("atualizando symmetric_key")
                                 # não tenho a chave síncrona, adicionando
                                 # OU
                                 # recebi a mais antiga (prioritária), me atualizo para essa
@@ -368,7 +367,7 @@ class Server(threading.Thread):
                             elif self.client.symmetric_key_time_stamp < coming_symmetric_key_time_stamp:
                                 # tenho a mais antiga (prioritária), mandar essa para quem me enviou a mais recente (inútil)
 
-                                print("retornando symmetric_key correta")
+                                # print("retornando symmetric_key correta")
                                 # enviar chave síncrona (usar RSA-encrypt)
                                 # enviar minha chave Publica
                                 # enviar HASH da chave síncrona (usar RSA-encrypt)
