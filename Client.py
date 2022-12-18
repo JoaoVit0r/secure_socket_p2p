@@ -105,16 +105,16 @@ class Client(threading.Thread):
 
         return {self.id: self.public_key}
 
-    def encrypt_fernet(self, message: str):
+    def encrypt_fernet(self, message: str) -> bytes:
         if self.fernet is None:
             return b''
         return self.fernet.encrypt(message.encode(FORMAT))
 
-    def decrypt_fernet(self, cipher_text, key):  # privateKey
+    def decrypt_fernet(self, cipher_text) -> bytes:
         if self.fernet is None:
             return b''
         try:
-            return self.fernet.decrypt(cipher_text, key).decode(FORMAT)
+            return self.fernet.decrypt(cipher_text)
         except:
             return b''
 
@@ -221,10 +221,15 @@ class Client(threading.Thread):
             if msg == '':
                 continue
 
-            # TODO: criptografar mensagem
+            # criptografar mensagem
+            encrypt_fernet_msg = self.encrypt_fernet(msg)
+            message_info: SocketMessageDefault = {
+                "message": cast_to_str(b64encode(encrypt_fernet_msg)),
+                "sign": cast_to_str(hash(b64encode(encrypt_fernet_msg)))
+            }
 
             print("\tSending...\n")
-            self.send_to_clients(msg, SENDING_MESSAGE)
+            self.send_to_clients(json.dumps(message_info), SENDING_MESSAGE)
         return (1)
 
 
@@ -293,7 +298,7 @@ class Server(threading.Thread):
 
                             print("enviando symmetric_key")
                             self.client.send_to_clients(
-                                    msg, SENDING_SYMMETRIC_KEY)
+                                msg, SENDING_SYMMETRIC_KEY)
 
                         elif msg_type == SENDING_SYMMETRIC_KEY:
                             # esse cliente esta recebendo a SymmetricKey de alguém
@@ -376,11 +381,28 @@ class Server(threading.Thread):
                         elif msg_type == SENDING_MESSAGE:
                             # mensagem normal
 
-                            # pega a mensagem encriptada
-                            message_encrypted = sck_msg["msg"]
+                            # convert str em dicionario
+                            infos_message: SocketMessageDefault = json.loads(
+                                sck_msg["msg"])
 
-                            # TODO: descriptografar mensagem
-                            msg = message_encrypted
+                            # pega a mensagem encriptada
+                            message_encrypted = infos_message["message"]
+
+                            sign = b64decode(
+                                cast_to_bytes(infos_message["sign"]))
+
+                            # descriptografar mensagem
+                            msg_bytes = (self.client.decrypt_fernet(b64decode(
+                                cast_to_bytes(message_encrypted))))
+                            msg: str = cast_to_str(msg_bytes)
+
+
+                            # verificar se os hashing batem
+                            verified = sign == hash(msg_bytes)
+
+                            if not verified:
+                                print("message not valid")
+                                continue
 
                             # mostrar mensagem
                             sender_name = sck_msg["senderName"]
