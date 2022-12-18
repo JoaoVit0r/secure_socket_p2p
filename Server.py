@@ -43,8 +43,8 @@ class Server(threading.Thread):
                             continue
                         else:
                             print('\t', str(sock.getpeername()), 'append message')
-                            TO_BE_SENT.append(s)
                             SENT_BY[s] = (str(sock.getpeername()))
+                            TO_BE_SENT.append(s)
                     except:
                         print('\t', str(sock.getpeername()), 'with error')
 
