@@ -174,7 +174,9 @@ class Client(threading.Thread):
         # Conecta socket com o Servidor já rodando
         self.connect(host, port)
         print("Connected\n")
-        # self.user_name = input("Enter the User Friendly Name to be Used\n>>")
+
+        if self.user_name == '':
+            self.user_name = input("Enter the User Friendly Name to be Used\n>>")
         # self.user_name = "user1"
 
         time.sleep(1)
